@@ -1,0 +1,15 @@
+# Secrets — לעולם לא לגיט
+.streamlit/secrets.toml
+
+# נתונים מקומיים — יועברו ל-Google Sheets
+local_data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+
+# Windows
+Thumbs.db
+Desktop.ini
