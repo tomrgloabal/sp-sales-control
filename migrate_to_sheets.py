@@ -66,9 +66,9 @@ def main():
 
         ws.clear()
         ws.update([headers] + rows)
-        print(f"  ✓ {tab}: {len(rows)} שורות")
+        print(f"  OK {tab}: {len(rows)} rows")
 
-    print("\nMigration הושלמה. בדוק את ה-Google Sheet.")
+    print("\nMigration complete. Check the Google Sheet.")
 
 
 if __name__ == "__main__":
