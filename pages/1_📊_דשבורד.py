@@ -14,6 +14,26 @@ st.markdown("""
 .kpi-value { font-size:2rem; font-weight:700; color:#1E2761; }
 .kpi-label { font-size:.85rem; color:#666; }
 header[data-testid="stHeader"] { display:none; }
+
+/* Product row card */
+.prod-card {
+  background:#fff;
+  border-radius:12px;
+  padding:.85rem 1.2rem;
+  box-shadow:0 2px 10px rgba(30,39,97,.09);
+  border-right:5px solid #1E2761;
+  display:flex;
+  align-items:center;
+  gap:1.5rem;
+  margin-bottom:.5rem;
+  flex-wrap:nowrap;
+  direction:rtl;
+}
+.prod-field { display:flex; flex-direction:column; min-width:80px; }
+.prod-field .lbl { font-size:.72rem; color:#888; margin-bottom:.1rem; white-space:nowrap; }
+.prod-field .val { font-size:1rem; font-weight:700; color:#1E2761; white-space:nowrap; }
+.prod-field .val.small { font-size:.82rem; }
+.prod-sep { width:1px; height:36px; background:#e0e3ef; flex-shrink:0; }
 </style>""", unsafe_allow_html=True)
 
 st.markdown("<h2 style='color:#1E2761; direction:rtl;'>📊 דשבורד</h2>", unsafe_allow_html=True)
@@ -30,41 +50,57 @@ if not products_df.empty and "ISIN" in products_df.columns:
     active = products_df[(products_df["סטטוס"] == "פעיל") & (products_df["ISIN"].str.strip() != "")].copy()
     if not active.empty:
         for row_i, row in active.iterrows():
-            isin_val = row.get("ISIN", "")
-            c1, c2, c3, c4, c5, c6 = st.columns([2, 2.5, 1.5, 2, 1.5, 1])
-            with c1:
-                st.markdown(f"""<div class='kpi-card'>
-                  <div class='kpi-label'>מנפיק</div>
-                  <div class='kpi-value' style='font-size:1.1rem;'>{row.get('מנפיק','—')}</div>
-                </div>""", unsafe_allow_html=True)
-            with c2:
-                st.markdown(f"""<div class='kpi-card'>
-                  <div class='kpi-label'>ISIN</div>
-                  <div class='kpi-value' style='font-size:.8rem;'>{isin_val}</div>
-                </div>""", unsafe_allow_html=True)
-            with c3:
-                st.markdown(f"""<div class='kpi-card'>
-                  <div class='kpi-label'>קופון שנתי</div>
-                  <div class='kpi-value'>{row.get('קופון שנתי','—')}</div>
-                </div>""", unsafe_allow_html=True)
-            with c4:
-                st.markdown(f"""<div class='kpi-card'>
-                  <div class='kpi-label'>מטבע / גודל</div>
-                  <div class='kpi-value' style='font-size:1rem;'>{row.get('מטבע','—')} {row.get('גודל עסקה','—')}</div>
-                </div>""", unsafe_allow_html=True)
-            with c5:
-                st.markdown(f"""<div class='kpi-card'>
-                  <div class='kpi-label'>מח"מ</div>
-                  <div class='kpi-value'>{row.get('מח"מ (חודשים)','—')} ח'</div>
-                </div>""", unsafe_allow_html=True)
-            with c6:
-                st.markdown("<div style='padding-top:1rem'></div>", unsafe_allow_html=True)
+            isin_val  = row.get("ISIN", "")
+            issuer    = row.get("מנפיק", "—")
+            currency  = row.get("מטבע", "—")
+            size      = row.get("גודל עסקה", "—")
+            _coupon_raw = str(row.get("קופון שנתי", "—"))
+            coupon    = _coupon_raw if "%" in _coupon_raw or _coupon_raw == "—" else f"{_coupon_raw}%"
+            duration  = row.get('מח"מ (חודשים)', "—")
+            maturity  = row.get("תאריך פדיון", "—")
+            barrier   = row.get("מחסום", "—")
+
+            card_left, card_right = st.columns([10, 1])
+            with card_left:
+                def _field(label, value, small=False):
+                    fs = "0.82rem" if small else "1rem"
+                    return f"""<div style="display:flex;flex-direction:column;min-width:70px;">
+                      <span style="font-size:.7rem;color:#888;white-space:nowrap;margin-bottom:2px;">{label}</span>
+                      <span style="font-size:{fs};font-weight:700;color:#1E2761;white-space:nowrap;">{value}</span>
+                    </div>"""
+                def _sep():
+                    return '<div style="width:1px;height:36px;background:#e0e3ef;flex-shrink:0;"></div>'
+
+                st.markdown(f"""
+                <div style="background:#fff;border-radius:12px;padding:.85rem 1.2rem;
+                            box-shadow:0 2px 10px rgba(30,39,97,.09);
+                            border-right:5px solid #1E2761;
+                            display:flex;align-items:center;gap:1.2rem;
+                            flex-wrap:nowrap;direction:rtl;margin-bottom:.5rem;overflow-x:auto;">
+                  {_field("מנפיק", issuer)}
+                  {_sep()}
+                  {_field("ISIN", isin_val, small=True)}
+                  {_sep()}
+                  {_field("מטבע", currency)}
+                  {_sep()}
+                  {_field("גודל עסקה", size)}
+                  {_sep()}
+                  {_field("קופון שנתי", coupon)}
+                  {_sep()}
+                  {_field('מח"מ', f"{duration} ח'")}
+                  {_sep()}
+                  {_field("תאריך פדיון", maturity, small=True)}
+                  {_sep()}
+                  {_field("מחסום", barrier)}
+                </div>
+                """, unsafe_allow_html=True)
+            with card_right:
+                st.markdown("<div style='padding-top:.4rem'></div>", unsafe_allow_html=True)
                 if st.button("🔒 סגור", key=f"close_{isin_val}", use_container_width=True):
                     products_df.at[row_i, "סטטוס"] = "סגור"
                     write_df("Products", products_df)
                     log_action(current_user(), "סגירת פקדון", isin_val)
                     st.rerun()
-            st.markdown("<div style='margin-bottom:.4rem;'></div>", unsafe_allow_html=True)
 
     # Show closed products collapsible
     closed = products_df[(products_df["סטטוס"] == "סגור") & (products_df["ISIN"].str.strip() != "")].copy()
