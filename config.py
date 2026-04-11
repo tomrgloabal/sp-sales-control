@@ -1,6 +1,16 @@
 USERS = ["תום ריכטר", "רון צוברי", "קובי לוין", "תמיר כהן", "מורן גלבר", "אורן שפירא", "הגר שטרקר"]
 USER_KEYS = ["תום", "רון", "קובי", "תמיר", "מורן", "אורן", "הגר"]
 
+USER_EMAILS = {
+    "תום ריכטר":  "tom@ar-fo.co.il",
+    "רון צוברי":  "ron@ar-fo.co.il",
+    "קובי לוין":  "kobi@ar-fo.co.il",
+    "תמיר כהן":  "tamir@ar-fo.co.il",
+    "מורן גלבר":  "moran@ar-fo.co.il",
+    "אורן שפירא": "oren@ar-fo.co.il",
+    "הגר שטרקר":  "hagar@ar-fo.co.il",
+}
+
 CONFIDENCE = ["גבוהה", "בינונית", "נמוכה"]
 CURRENCIES = ["ILS", "USD", "EUR"]
 TOOLS = ["A", "B"]

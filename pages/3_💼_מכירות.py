@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date
 from auth import require_login, current_user
 from sheets import read_df, write_df, append_row, log_action
-from config import SALES_STAGES, BANKS, CURRENCIES, SALES_COLS
+from config import SALES_STAGES, BANKS, CURRENCIES, SALES_COLS, BANK_DETAILS, USER_EMAILS
 
 require_login()
 
@@ -212,3 +212,98 @@ if not full_df.empty and "שם לקוח" in full_df.columns:
         log_action(current_user(), "עדכון שלב מכירה", f"{sel} → {new_stage}")
         st.success(f"✓ {sel} עודכן ל: {new_stage}")
         st.rerun()
+
+    # ── Partner email ─────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### 📧 שלח עדכון לשותף")
+
+    # Find which partner brought this customer (from Pipeline)
+    pipeline_df = read_df("Pipeline")
+    partner_name = ""
+    if not pipeline_df.empty and "שם לקוח" in pipeline_df.columns and "דרך נציג" in pipeline_df.columns:
+        match = pipeline_df[pipeline_df["שם לקוח"] == sel]
+        if not match.empty:
+            partner_name = str(match.iloc[0].get("דרך נציג", ""))
+
+    # Get product details for ISIN
+    isin_val  = str(full_df.at[row_idx, "ISIN פקדון"]) if "ISIN פקדון" in full_df.columns else ""
+    bank_name = str(full_df.at[row_idx, "בנק"])        if "בנק"        in full_df.columns else ""
+    amount    = str(full_df.at[row_idx, "סכום"])        if "סכום"       in full_df.columns else ""
+    currency  = str(full_df.at[row_idx, "מטבע"])        if "מטבע"       in full_df.columns else ""
+
+    prod_line = ""
+    if isin_val:
+        prod_df = read_df("Products")
+        if not prod_df.empty and "ISIN" in prod_df.columns:
+            pm = prod_df[prod_df["ISIN"] == isin_val]
+            if not pm.empty:
+                p = pm.iloc[0]
+                issuer  = p.get("מנפיק", "—")
+                coupon  = p.get("קופון שנתי", "—")
+                dur     = p.get('מח"מ (חודשים)', "—")
+                barrier = p.get("מחסום", "—")
+                prod_line = f"פקדון: {issuer} | ISIN: {isin_val} | קופון: {coupon}% | מח\"מ: {dur} חודשים | מחסום: {barrier}"
+
+    # Bank instructions lookup (partial match)
+    bank_key = next((k for k in BANK_DETAILS if k in bank_name), None)
+    bank_info = BANK_DETAILS.get(bank_key, {}) if bank_key else {}
+    clearing  = bank_info.get("clearing_code", "—")
+    method    = bank_info.get("method", "—")
+    attachments_list = bank_info.get("attachments", [])
+    bank_notes = bank_info.get("notes", "")
+
+    # Build email body
+    stage_display = str(full_df.at[row_idx, "שלב"]) if "שלב" in full_df.columns else ""
+    partner_short = partner_name.split()[0] if partner_name else "שותף"
+    attachments_text = "\n".join(f"  • {a}" for a in attachments_list) if attachments_list else "  • אין קבצים מיוחדים"
+
+    email_subject = f"עדכון תהליך — {sel} | {stage_display}"
+    email_body = f"""שלום {partner_short},
+
+עדכון לגבי המשקיע שהכנסת — {sel}:
+
+שלב נוכחי: {stage_display}
+{prod_line}
+בנק: {bank_name} | סכום: {currency} {amount}
+
+── הנחיות לבנק ──
+שיטת ביצוע: {method}
+קוד סליקה: {clearing}
+{("הערות: " + bank_notes) if bank_notes else ""}
+
+── קבצים לצרף ──
+{attachments_text}
+
+לשאלות — צור קשר.
+בברכה,
+Arbitrage Global"""
+
+    # Display partner info
+    if partner_name:
+        partner_email = USER_EMAILS.get(partner_name, "")
+        col_p1, col_p2 = st.columns([3, 1])
+        with col_p1:
+            st.markdown(f"**שותף:** {partner_name}"
+                        + (f"  |  📬 `{partner_email}`" if partner_email else "  |  *(אין מייל רשום)*"))
+        with col_p2:
+            if partner_email:
+                import urllib.parse
+                mailto = f"mailto:{partner_email}?subject={urllib.parse.quote(email_subject)}&body={urllib.parse.quote(email_body)}"
+                st.link_button("📤 פתח בתוכנת מייל", mailto, use_container_width=True)
+    else:
+        st.caption("לא נמצא שותף מקשר ללקוח זה בפייפליין")
+
+    # Email preview
+    with st.expander("📄 תצוגה מקדימה של המייל", expanded=False):
+        st.markdown(f"**נושא:** {email_subject}")
+        st.text_area("גוף המייל", value=email_body, height=320, key="email_preview_body")
+        st.caption("ניתן לערוך את הטקסט לפני שליחה")
+
+    # Attachments checklist
+    if attachments_list:
+        with st.expander(f"📎 קבצים נלווים ({len(attachments_list)})", expanded=True):
+            st.caption(f"קבצים נדרשים עבור {bank_name}:")
+            for att in attachments_list:
+                st.checkbox(att, key=f"att_{sel}_{att[:20]}")
+            if bank_notes:
+                st.info(f"💡 {bank_notes}")
