@@ -19,7 +19,6 @@ header[data-testid="stHeader"] { display:none; }
 st.markdown("<h2 style='color:#1E2761; direction:rtl;'>📊 דשבורד</h2>", unsafe_allow_html=True)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-product_df    = read_df("Product")
 products_df   = read_df("Products")
 pipeline_df   = read_df("Pipeline")
 sales_df      = read_df("Sales")

@@ -41,9 +41,12 @@ def _get_worksheet(tab: str):
 
 def read_df(tab: str) -> pd.DataFrame:
     if _use_sheets():
-        ws = _get_worksheet(tab)
-        records = ws.get_all_records()
-        return pd.DataFrame(records)
+        try:
+            ws = _get_worksheet(tab)
+            records = ws.get_all_records()
+            return pd.DataFrame(records)
+        except Exception:
+            return pd.DataFrame()
     # local fallback
     path = DATA_DIR / f"{tab}.json"
     if path.exists():
