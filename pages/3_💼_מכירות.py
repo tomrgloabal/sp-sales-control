@@ -36,24 +36,75 @@ def _active_isins() -> list[str]:
 
 
 # ── Add entry ─────────────────────────────────────────────────────────────────
+
+def _pipeline_names() -> list[str]:
+    """Return list of customer names from Pipeline sheet."""
+    df = read_df("Pipeline")
+    if df.empty or "שם לקוח" not in df.columns:
+        return []
+    return sorted(df["שם לקוח"].dropna().unique().tolist())
+
+def _pipeline_data(name: str) -> dict:
+    """Return pipeline row data for a given name (bank, amount, currency)."""
+    df = read_df("Pipeline")
+    if df.empty or "שם לקוח" not in df.columns:
+        return {}
+    match = df[df["שם לקוח"] == name]
+    if match.empty:
+        return {}
+    row = match.iloc[0]
+    return {
+        "bank":     str(row.get("בנק", "")),
+        "amount":   int(float(str(row.get("סכום משוער", 0) or 0).replace(",", "") or 0)),
+        "currency": str(row.get("מטבע", "ILS")),
+    }
+
+_NEW_CUSTOMER = "— לקוח חדש (הקלד ידנית) —"
+_pipeline_names_list = _pipeline_names()
+_name_options = _pipeline_names_list + [_NEW_CUSTOMER]
+
 with st.expander("➕ הוספת לקוח לתהליך מכירה", expanded=True):
+
+    # Name selector — outside form so it can drive pre-fill
+    sel_name_opt = st.selectbox(
+        "שם לקוח *",
+        _name_options,
+        index=len(_name_options) - 1,
+        key="sale_name_sel",
+        help="בחר מהפייפליין או בחר 'לקוח חדש' להקלדה ידנית"
+    )
+
+    from_pipeline = sel_name_opt != _NEW_CUSTOMER
+    pdata = _pipeline_data(sel_name_opt) if from_pipeline else {}
+
+    if not from_pipeline:
+        manual_name = st.text_input("הקלד שם לקוח", key="sale_name_manual")
+    else:
+        manual_name = ""
+        st.caption(f"✓ נבחר מהפייפליין: **{sel_name_opt}**")
+
     with st.form("add_sale", clear_on_submit=True):
         c1, c2 = st.columns(2)
         with c1:
-            name   = st.text_input("שם לקוח *")
-            bank   = st.selectbox("בנק הלקוח", BANKS)
+            # Pre-fill bank from pipeline if available
+            bank_default_idx = BANKS.index(pdata["bank"]) if pdata.get("bank") and pdata["bank"] in BANKS else 0
+            bank   = st.selectbox("בנק הלקוח", BANKS, index=bank_default_idx)
             isins  = _active_isins()
             isin_options = isins + ["— כללי —"] if isins else ["— כללי —"]
             sel_isin = st.selectbox("פקדון (ISIN)", isin_options)
         with c2:
-            amount     = st.number_input("סכום", min_value=0, step=50000)
-            currency   = st.selectbox("מטבע", CURRENCIES)
+            amount     = st.number_input("סכום", min_value=0, step=50000,
+                                         value=pdata.get("amount", 0))
+            cur_default = pdata.get("currency", "ILS")
+            cur_idx = CURRENCIES.index(cur_default) if cur_default in CURRENCIES else 0
+            currency   = st.selectbox("מטבע", CURRENCIES, index=cur_idx)
             stage      = st.selectbox("שלב נוכחי", SALES_STAGES)
             offer_date = st.date_input("תאריך הצעה", value=date.today())
         notes = st.text_area("הערות")
         sub = st.form_submit_button("הוסף", use_container_width=True, type="primary")
 
     if sub:
+        name = sel_name_opt if from_pipeline else manual_name.strip()
         if not name:
             st.error("שם לקוח חובה")
         else:
