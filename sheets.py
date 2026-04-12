@@ -32,9 +32,22 @@ def _get_client():
 
 
 def _get_worksheet(tab: str):
+    import gspread
     client = _get_client()
     sh = client.open_by_key(st.secrets["spreadsheet_id"])
-    return sh.worksheet(tab)
+    try:
+        return sh.worksheet(tab)
+    except gspread.exceptions.WorksheetNotFound:
+        # Create the worksheet with a header row if we know the columns
+        try:
+            from config import TAB_COLS
+            cols = TAB_COLS.get(tab, [])
+        except Exception:
+            cols = []
+        ws = sh.add_worksheet(title=tab, rows=500, cols=max(len(cols), 20))
+        if cols:
+            ws.append_row(cols, value_input_option="USER_ENTERED")
+        return ws
 
 
 # ── public API ────────────────────────────────────────────────────────────────
