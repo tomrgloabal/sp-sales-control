@@ -120,8 +120,31 @@ def _find(pattern: str, text: str, default: str = "") -> str:
     return m.group(1).strip() if m else default
 
 
+def _normalize_size(raw: str) -> str:
+    """Convert '500K ILS', '1M USD', '500,000' → clean number string."""
+    raw = raw.strip()
+    m = re.match(r'([\d,\.]+)\s*([KkMm]?)', raw.replace("'", ""))
+    if not m:
+        return raw
+    num_str = m.group(1).replace(",", "")
+    suffix  = m.group(2).upper()
+    try:
+        num = float(num_str)
+        if suffix == "K": num *= 1_000
+        if suffix == "M": num *= 1_000_000
+        return str(int(num))
+    except Exception:
+        return raw
+
+
 def _parse_ts(text: str) -> dict:
-    """Extract term-sheet fields from raw PDF text."""
+    """Extract term-sheet fields from raw PDF text or free-text bullet format."""
+    # Normalise bullet-point and tab formats → colon format for consistent parsing
+    # • Key : Value  →  Key: Value
+    # Key\tValue     →  Key: Value
+    text = re.sub(r'^[•·\-\*]\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r'\t+', ': ', text)
+
     p = {}
 
     # ISIN — XS or CH followed by 10 digits
@@ -149,14 +172,15 @@ def _parse_ts(text: str) -> dict:
 
     # Notional / Size
     for pat in [
-        r'Notional[:\s]+([\d,\.]+\s*(?:ILS|USD|EUR|CHF))',
-        r'Nominal[:\s]+([\d,\.]+\s*(?:ILS|USD|EUR|CHF))',
-        r'Size[:\s]+([\d,\.]+\s*(?:ILS|USD|EUR|CHF))',
+        r'(?:Notional|Nominal|Size)[:\s]+([\d,\.'\']+\s*[KkMm]?\s*(?:ILS|USD|EUR|CHF)?)',
+        r'([\d,\.'\']+\s*[KkMm])\s*(?:ILS|USD|EUR|CHF)',
         r'([\d,]+)\s*(?:ILS|USD|EUR)',
     ]:
         val = _find(pat, text)
         if val:
-            p["גודל עסקה"] = val
+            # Strip trailing currency suffix before normalizing
+            raw_size = re.sub(r'\s*(ILS|USD|EUR|CHF)\s*$', '', val.strip(), flags=re.IGNORECASE)
+            p["גודל עסקה"] = _normalize_size(raw_size)
             break
     if "גודל עסקה" not in p:
         p["גודל עסקה"] = ""
@@ -183,13 +207,16 @@ def _parse_ts(text: str) -> dict:
     if 'מח"מ (חודשים)' not in p:
         p['מח"מ (חודשים)'] = ""
 
-    # Barrier
+    # Barrier / Capital Guarantee
     for pat in [
+        r'CAPITALGUARANTEED[:\s]+([\d\.]+%)',
+        r'Capital\s+[Gg]uarantee(?:d)?[:\s]+([\d\.]+%)',
         r'Barrier[:\s]+([\d\.]+%[^,\n]{0,30})',
         r'Capital [Pp]rotection[:\s]+([\d\.]+%)',
         r'([\d\.]+%)\s*(?:European|American)?\s*(?:Barrier|barrier)',
         r'Barrier Level[:\s]+([\d\.]+%)',
         r'Protection Level[:\s]+([\d\.]+%)',
+        r'(100%)\s*Capital\s+[Gg]uarantee',
     ]:
         val = _find(pat, text)
         if val:
@@ -200,11 +227,13 @@ def _parse_ts(text: str) -> dict:
 
     # Coupon annual
     for pat in [
+        r'(?:Coupon\s+if\s+called[^:]*)[:\s]+([\d\.]+%)\s*p\.?a\.?',
         r'(?:Guaranteed\s+)?Coupon[:\s]+([\d\.]+%)\s*p\.?a\.?',
         r'(?:Annual\s+)?(?:Coupon|Yield)[:\s]+([\d\.]+%)\s*(?:per annum|p\.a\.)',
         r'([\d\.]+%)\s*(?:p\.a\.|per annum)',
         r'Coupon Rate[:\s]+([\d\.]+%)',
         r'Interest[:\s]+([\d\.]+%)\s*p\.a',
+        r'(?:Coupon|Yield)[:\s]+([\d\.]+%)',
     ]:
         val = _find(pat, text)
         if val:
@@ -233,6 +262,7 @@ def _parse_ts(text: str) -> dict:
     # Underlyings — look for stock tickers or company names
     und_text = ""
     for pat in [
+        r"Underlying[s']?\s*\(?(?:WO|Worst[- ]Of)?\)?[:\s]+([A-Z\u05d0-\u05ea][^\n]{3,120})",
         r'Underlying[s]?[:\s]+([A-Z][^\n]{5,120})',
         r'Reference[s]?[:\s]+([A-Z][^\n]{5,80})',
         r'Worst[- ]of[:\s]+([A-Z][^\n]{5,80})',
@@ -251,7 +281,7 @@ def _parse_ts(text: str) -> dict:
 
     # Split underlyings into 1/2/3
     if und_text:
-        parts = re.split(r'[/,&]|\s+and\s+|\s+AND\s+', und_text)
+        parts = re.split(r'[/,&]|\s+-\s+|\s+and\s+|\s+AND\s+', und_text)
         parts = [p2.strip() for p2 in parts if p2.strip()]
         p["נכס בסיס 1"] = parts[0] if len(parts) > 0 else ""
         p["נכס בסיס 2"] = parts[1] if len(parts) > 1 else ""
@@ -263,7 +293,9 @@ def _parse_ts(text: str) -> dict:
 
     # First autocall observation month
     for pat in [
+        r'[Ff]irst\s+observation\s+in[:\s]+(\d+)\s*[Mm]onths?',
         r'[Ff]irst\s+(?:[Aa]utocall|[Oo]bservation)[:\s]+(?:Month\s+)?(\d+)',
+        r'[Cc]allability[^\n]*[Ff]irst\s+observation\s+in\s+(\d+)',
         r'[Aa]utocall[:\s]+M(\d+)',
         r'M(\d+)\s+100%',   # first trigger at 100%
     ]:
@@ -380,12 +412,7 @@ st.divider()
 
 # ── Session state init ────────────────────────────────────────────────────────
 if "ts_parsed" not in st.session_state:
-    # Load last saved product as default
-    prod_df = read_df("Product")
-    if not prod_df.empty and "שדה" in prod_df.columns:
-        st.session_state["ts_parsed"] = dict(zip(prod_df["שדה"], prod_df["ערך"]))
-    else:
-        st.session_state["ts_parsed"] = {}
+    st.session_state["ts_parsed"] = {}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -416,6 +443,27 @@ if uploaded:
     with st.expander("📄 טקסט גולמי מה-PDF (לבדיקה)", expanded=False):
         st.text(raw_text[:3000])
 
+# ── Free-text single-product paste ───────────────────────────────────────────
+with st.expander("✍️ הדבק תיאור חופשי — פקדון יחיד", expanded=False):
+    st.caption("הדבק כאן פורמט חופשי עם bullet points, tabs, או שורות Key: Value — המערכת תנסה לחלץ את הפרטים אוטומטית")
+    free_text = st.text_area(
+        "טקסט חופשי",
+        height=200,
+        key="free_text_single",
+        placeholder="• Issuer: BNP\n• ISIN: XS3330669121\n• Size: 500K ILS\nMaturity: 36 Months\nCoupon if called: 7.50% p.a. ILS\nUnderlying's (WO): LUMI - MZTF - Harel\nCallability: Every quarter, first observation in 12 month(s)",
+    )
+    if st.button("🔍 נתח טקסט", key="parse_free_btn"):
+        if free_text.strip():
+            parsed_free = _parse_ts(free_text)
+            st.session_state["ts_parsed"] = parsed_free
+            if parsed_free.get("ISIN"):
+                st.success(f"✓ זוהה ISIN: **{parsed_free['ISIN']}** — הטופס מולא אוטומטית למטה")
+            else:
+                st.warning("לא זוהה ISIN — בדוק את הטקסט או מלא ידנית")
+            st.rerun()
+        else:
+            st.warning("הדבק טקסט תחילה")
+
 st.divider()
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -428,7 +476,6 @@ with col_clear:
     st.markdown("<div style='padding-top:1.2rem'></div>", unsafe_allow_html=True)
     if st.button("🗑️ נקה טופס", use_container_width=True):
         st.session_state["ts_parsed"] = {}
-        write_df("Product", pd.DataFrame(columns=["שדה", "ערך"]))
         st.rerun()
 
 p = st.session_state.get("ts_parsed", {})
@@ -468,18 +515,6 @@ with st.form("product_form"):
     save = st.form_submit_button("💾 שמור פקדון למערכת", use_container_width=True, type="primary")
 
 if save:
-    rows = [
-        ["מנפיק", issuer], ["ISIN", isin], ["גודל עסקה", size],
-        ["מטבע", currency], ['מח"מ (חודשים)', maturity], ["מחסום", barrier],
-        ["קופון שנתי", coupon_a], ["קופון חודשי", coupon_m],
-        ["נכס בסיס 1", und1], ["נכס בסיס 2", und2], ["נכס בסיס 3", und3],
-        ["תצפית Autocall ראשונה (חודש)", first_ac],
-        ["תאריך Strike", strike_date], ["תאריך סגירת גיוס", close_date],
-        ["לוח Autocall Triggers", triggers], ["הערות", notes],
-    ]
-    new_df = pd.DataFrame(rows, columns=["שדה", "ערך"])
-    write_df("Product", new_df)
-
     # Upsert into Products list
     products_df = read_df("Products")
     if products_df.empty:
