@@ -172,8 +172,8 @@ def _parse_ts(text: str) -> dict:
 
     # Notional / Size
     for pat in [
-        r'(?:Notional|Nominal|Size)[:\s]+([\d,\.'\']+\s*[KkMm]?\s*(?:ILS|USD|EUR|CHF)?)',
-        r'([\d,\.'\']+\s*[KkMm])\s*(?:ILS|USD|EUR|CHF)',
+        r"(?:Notional|Nominal|Size)[:\s]+([\d,.']+\s*[KkMm]?\s*(?:ILS|USD|EUR|CHF)?)",
+        r"([\d,.']+\s*[KkMm])\s*(?:ILS|USD|EUR|CHF)",
         r'([\d,]+)\s*(?:ILS|USD|EUR)',
     ]:
         val = _find(pat, text)
