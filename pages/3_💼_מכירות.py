@@ -176,31 +176,43 @@ if not full_df.empty and "שם לקוח" in full_df.columns:
     st.markdown("---")
     st.markdown("#### עדכון שלב מהיר")
     names = full_df["שם לקוח"].tolist()
+
+    # Customer selector OUTSIDE form (drives which row we show)
     sel = st.selectbox("בחר לקוח", names, key="stage_sel")
     row_idx = full_df[full_df["שם לקוח"] == sel].index[0]
     current_stage = full_df.at[row_idx, "שלב"] if "שלב" in full_df.columns else SALES_STAGES[0]
 
-    c1, c2, c3 = st.columns([2, 1, 1])
-    with c1:
-        new_stage = st.selectbox("שלב חדש", SALES_STAGES,
-            index=SALES_STAGES.index(current_stage) if current_stage in SALES_STAGES else 0,
-            key="new_stage")
-    with c2:
-        confirm_date = st.date_input("תאריך אישור", value=date.today(), key="confirm_date")
-    with c3:
-        cur_curr = str(full_df.at[row_idx, "מטבע"]) if "מטבע" in full_df.columns else "ILS"
-        new_currency = st.selectbox("מטבע", CURRENCIES,
-            index=CURRENCIES.index(cur_curr) if cur_curr in CURRENCIES else 0,
-            key="stage_currency")
+    # Everything else inside a form — no rerun on checkbox/selectbox change
+    with st.form("update_stage_form"):
+        c1, c2, c3 = st.columns([2, 1, 1])
+        with c1:
+            new_stage = st.selectbox("שלב חדש", SALES_STAGES,
+                index=SALES_STAGES.index(current_stage) if current_stage in SALES_STAGES else 0)
+        with c2:
+            confirm_date = st.date_input("תאריך אישור", value=date.today())
+        with c3:
+            cur_curr = str(full_df.at[row_idx, "מטבע"]) if "מטבע" in full_df.columns else "ILS"
+            new_currency = st.selectbox("מטבע", CURRENCIES,
+                index=CURRENCIES.index(cur_curr) if cur_curr in CURRENCIES else 0)
 
-    st.markdown("**סימון שלבי ביצוע:**")
-    bc1, bc2, bc3, bc4 = st.columns(4)
-    with bc1: inst_sent = st.checkbox("הנחיות נשלחו",  value=full_df.at[row_idx, "הנחיות נשלחו"] == "כן"  if "הנחיות נשלחו"  in full_df.columns else False)
-    with bc2: docs_done = st.checkbox("מסמכים הוכנו",  value=full_df.at[row_idx, "מסמכים הוכנו"]  == "כן"  if "מסמכים הוכנו"  in full_df.columns else False)
-    with bc3: bank_conf = st.checkbox("אישור בנק לקוח",value=full_df.at[row_idx, "אישור בנק לקוח"] == "כן" if "אישור בנק לקוח" in full_df.columns else False)
-    with bc4: iss_conf  = st.checkbox("אישור בנק מנפיק",value=full_df.at[row_idx,"אישור בנק מנפיק"]== "כן" if "אישור בנק מנפיק" in full_df.columns else False)
+        st.markdown("**סימון שלבי ביצוע:**")
+        bc1, bc2, bc3, bc4 = st.columns(4)
+        with bc1:
+            inst_sent = st.checkbox("הנחיות נשלחו",
+                value=(full_df.at[row_idx, "הנחיות נשלחו"] == "כן") if "הנחיות נשלחו" in full_df.columns else False)
+        with bc2:
+            docs_done = st.checkbox("מסמכים הוכנו",
+                value=(full_df.at[row_idx, "מסמכים הוכנו"] == "כן") if "מסמכים הוכנו" in full_df.columns else False)
+        with bc3:
+            bank_conf = st.checkbox("אישור בנק לקוח",
+                value=(full_df.at[row_idx, "אישור בנק לקוח"] == "כן") if "אישור בנק לקוח" in full_df.columns else False)
+        with bc4:
+            iss_conf = st.checkbox("אישור בנק מנפיק",
+                value=(full_df.at[row_idx, "אישור בנק מנפיק"] == "כן") if "אישור בנק מנפיק" in full_df.columns else False)
 
-    if st.button("✓ עדכן", use_container_width=True, type="primary"):
+        update_btn = st.form_submit_button("✓ עדכן", use_container_width=True, type="primary")
+
+    if update_btn:
         full_df.at[row_idx, "שלב"]             = new_stage
         full_df.at[row_idx, "תאריך אישור"]     = confirm_date.strftime("%d/%m/%Y")
         full_df.at[row_idx, "מטבע"]             = new_currency
