@@ -98,27 +98,54 @@ with tab_hanchayot:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_gen:
     st.markdown("#### ✉️ יצירת מייל הנחיות רכישה")
-    st.caption("בחר פקדון ומשקיע — כל השדות ימולאו אוטומטית.")
+    st.caption("בחר לקוח מהפייפליין — כל השדות ימולאו אוטומטית.")
 
-    # ── Product selector ──────────────────────────────────────────────────────
+    # ── Load pipeline ─────────────────────────────────────────────────────────
+    pip_df = read_df("Pipeline")
+    _MANUAL = "— הקלד ידנית —"
+    pip_names: list[str] = []
+    pip_data:  dict[str, dict] = {}
+
+    if not pip_df.empty and "שם לקוח" in pip_df.columns:
+        for _, r in pip_df.iterrows():
+            name = str(r.get("שם לקוח", "")).strip()
+            if not name:
+                continue
+            pip_names.append(name)
+            raw_amt = r.get("סכום משוער", 0) or 0
+            try:
+                amt = int(float(str(raw_amt).replace(",", "") or 0))
+            except Exception:
+                amt = 0
+            pip_data[name] = {
+                "בנק":    str(r.get("בנק", "")),
+                "סכום":   amt,
+                "מטבע":   str(r.get("מטבע", "ILS")),
+                "isin":   str(r.get("ISIN פקדון", "")),
+                "נציג":   str(r.get("דרך נציג", "")),
+            }
+
+    pip_sel = st.selectbox(
+        "בחר לקוח מהפייפליין",
+        [_MANUAL] + sorted(set(pip_names)),
+        key="gen_pip_sel",
+        help="בחירה ממלאת אוטומטית: שם, בנק, סכום, מטבע ו-ISIN"
+    )
+    pdata = pip_data.get(pip_sel, {}) if pip_sel != _MANUAL else {}
+
+    st.divider()
+
+    # ── Product selector — auto-select from pipeline ──────────────────────────
     products_df = read_df("Products")
     prod_df     = read_df("Product")
 
-    # Build product list: from Products tab + fallback to Product tab
-    prod_options: dict[str, dict] = {}  # ISIN → fields dict
+    prod_options: dict[str, dict] = {}
     if not products_df.empty and "ISIN" in products_df.columns:
         for _, row in products_df.iterrows():
             isin_key = str(row.get("ISIN", "")).strip()
             if isin_key:
-                prod_options[isin_key] = {
-                    "מנפיק":      row.get("מנפיק", ""),
-                    "נכסי בסיס": row.get("נכסי בסיס", ""),
-                    "קופון שנתי": row.get("קופון שנתי", ""),
-                    'מח"מ (חודשים)': row.get('מח"מ (חודשים)', ""),
-                    "מטבע":       row.get("מטבע", "ILS"),
-                    "תאריך סגירה": row.get("תאריך סגירה", ""),
-                }
-    # Fallback: use the single Product tab
+                prod_options[isin_key] = dict(row)
+
     fallback_prod = {}
     if not prod_df.empty and "שדה" in prod_df.columns:
         fallback_prod = dict(zip(prod_df["שדה"], prod_df["ערך"]))
@@ -127,55 +154,29 @@ with tab_gen:
             prod_options[fb_isin] = fallback_prod
 
     isin_list = list(prod_options.keys()) or [""]
+    # Auto-select ISIN from pipeline
+    pip_isin = pdata.get("isin", "")
+    isin_default_idx = isin_list.index(pip_isin) if pip_isin in isin_list else 0
+
     sel_prod_isin = st.selectbox(
-        "בחר פקדון (ISIN)",
+        "פקדון (ISIN)",
         isin_list,
+        index=isin_default_idx,
         format_func=lambda x: f"{x} — {prod_options.get(x, {}).get('מנפיק', '')} | {prod_options.get(x, {}).get('נכסי בסיס', '')}",
         key="gen_prod_sel"
     )
-    # Auto-load product fields
     prod = prod_options.get(sel_prod_isin, fallback_prod)
-    # For full details (barrier, triggers, etc.) load from Product tab if ISIN matches
     if fallback_prod.get("ISIN") == sel_prod_isin:
         prod = fallback_prod
 
-    # ── Investor + bank selection ─────────────────────────────────────────────
-    pip_df   = read_df("Pipeline")
-    sales_df = read_df("Sales")
-    investor_names: list[str] = []
-    investor_data: dict[str, dict] = {}
-
-    # Build investor list with their data
-    for df_, isin_col in [(pip_df, "ISIN פקדון"), (sales_df, "ISIN פקדון")]:
-        if df_.empty or "שם לקוח" not in df_.columns:
-            continue
-        # Filter to selected product if possible
-        if isin_col in df_.columns:
-            filtered = df_[df_[isin_col].fillna("") == sel_prod_isin]
-            if filtered.empty:
-                filtered = df_
-        else:
-            filtered = df_
-        for _, r in filtered.iterrows():
-            name = str(r.get("שם לקוח", "")).strip()
-            if name and name not in investor_data:
-                investor_names.append(name)
-                investor_data[name] = {
-                    "בנק":    str(r.get("בנק", "")),
-                    "סכום":   r.get("סכום", 0),
-                    "מטבע":   str(r.get("מטבע", "ILS")),
-                }
-    investor_names = sorted(set(investor_names))
-
+    # ── Client + bank fields (auto-filled from pipeline) ─────────────────────
     c1, c2 = st.columns(2)
     with c1:
-        inv_opts = ["— הקלד ידנית —"] + investor_names
-        inv_choice = st.selectbox("משקיע", inv_opts, key="gen_inv_sel")
-        inv_prefill = investor_data.get(inv_choice, {}) if inv_choice != "— הקלד ידנית —" else {}
+        # Single name field — pre-filled from pipeline, editable
         investor_name = st.text_input(
-            "שם משקיע",
-            value="" if inv_choice == "— הקלד ידנית —" else inv_choice,
-            key="gen_inv_manual"
+            "שם לקוח",
+            value=pip_sel if pip_sel != _MANUAL else "",
+            key="gen_inv_name"
         )
         account_num = st.text_input("מספר חשבון", placeholder="12345678", key="gen_account")
 
@@ -184,20 +185,22 @@ with tab_gen:
             bank_options = [d.name for d in BANKS_DIR.iterdir() if d.is_dir() and d.name != "גיוסים"]
         else:
             bank_options = BANKS
-        # Auto-select bank from investor data
-        inv_bank = inv_prefill.get("בנק", "")
+        # Auto-select bank from pipeline
+        inv_bank = pdata.get("בנק", "")
         bank_default_idx = next((i for i, b in enumerate(bank_options) if inv_bank and inv_bank in b), 0)
         sel_gen_bank = st.selectbox("בנק", bank_options, index=bank_default_idx, key="gen_bank")
 
-        # Auto-select currency from product
-        prod_currency = prod.get("מטבע", "ILS")
+        # Auto-select currency: pipeline first, then product
+        pip_cur  = pdata.get("מטבע", "")
+        prod_cur = prod.get("מטבע", "ILS")
+        cur_val  = pip_cur if pip_cur else prod_cur
         currencies_list = ["ILS", "USD", "EUR", "CHF"]
-        cur_idx = currencies_list.index(prod_currency) if prod_currency in currencies_list else 0
+        cur_idx = currencies_list.index(cur_val) if cur_val in currencies_list else 0
         currency = st.selectbox("מטבע", currencies_list, index=cur_idx, key="gen_currency")
 
-        # Auto-fill amount from investor data
-        inv_amount = int(inv_prefill.get("סכום", 0)) if inv_prefill.get("סכום") else 0
-        amount = st.number_input("סכום", min_value=0, step=50000, value=inv_amount, key="gen_amount")
+        # Auto-fill amount from pipeline
+        inv_amount = pdata.get("סכום", 0) or 0
+        amount = st.number_input("סכום", min_value=0, step=50000, value=int(inv_amount), key="gen_amount")
 
     # Product fields (auto-filled, shown for reference)
     isin         = sel_prod_isin or prod.get("ISIN", "XXXXXXXX")
