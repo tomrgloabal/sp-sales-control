@@ -20,7 +20,7 @@ header[data-testid="stHeader"]{display:none;}
     font-size:.82rem; font-weight:600;
 }
 </style>""", unsafe_allow_html=True)
-st.markdown("<h2 style='color:#1E2761;'>🗂️ ארכיון מאוחד</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:#1E2761;'>🗂️ ארכיון מכירות</h2>", unsafe_allow_html=True)
 
 DATA_DIR      = Path(__file__).parent.parent / "local_data"
 INVESTORS_FILE = DATA_DIR / "ProductInvestors.json"
