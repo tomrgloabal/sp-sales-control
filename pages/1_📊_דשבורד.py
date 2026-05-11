@@ -14,6 +14,7 @@ st.markdown("""
 .kpi-value { font-size:2rem; font-weight:700; color:#1E2761; }
 .kpi-label { font-size:.85rem; color:#666; }
 header[data-testid="stHeader"] { display:none; }
+div[data-testid="stButton"] button { white-space:nowrap !important; }
 
 /* Product row card */
 .prod-card {
