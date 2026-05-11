@@ -48,8 +48,9 @@ TAB_COLS = {
     "AuditLog":    AUDIT_COLS,
 }
 
-NAVY  = "#1E2761"
-GREEN = "#1A7A4A"
+NAVY  = "#003327"   # Arbitrage Global primary dark green
+GREEN = "#FFC300"   # Arbitrage Global CTA gold
+TEAL  = "#005059"   # Arbitrage Global secondary teal
 
 # Tool A/B descriptions (shown in UI)
 TOOL_DESCRIPTIONS = {

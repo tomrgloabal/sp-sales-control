@@ -9,7 +9,7 @@ from config import CURRENCIES, PRODUCTS_COLS
 require_login()
 
 st.markdown("""<style>.stApp{direction:rtl;} header[data-testid="stHeader"]{display:none;}</style>""", unsafe_allow_html=True)
-st.markdown("<h2 style='color:#1E2761;'>📄 פקדונות פעילים</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:#003327;'>📄 פקדונות פעילים</h2>", unsafe_allow_html=True)
 
 TS_DIR = Path(__file__).parent.parent / "local_data" / "term_sheets"
 TS_DIR.mkdir(exist_ok=True)

@@ -8,7 +8,7 @@ from config import CONFIDENCE, CURRENCIES, TOOLS, TOOL_DESCRIPTIONS, PIPELINE_ST
 require_login()
 
 st.markdown("""<style>.stApp{direction:rtl;} header[data-testid="stHeader"]{display:none;}</style>""", unsafe_allow_html=True)
-st.markdown("<h2 style='color:#1E2761;'>📋 פייפליין — מאגר לקוחות</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:#003327;'>📋 פייפליין — מאגר לקוחות</h2>", unsafe_allow_html=True)
 st.caption("לקוחות שמוכנים מראש. כשהפקדון יוצא — אלה הראשונים שפונים אליהם.")
 
 
@@ -198,7 +198,7 @@ else:
             with fc:
                 st.markdown(f"""<div style='background:{funnel_colors.get(status,"#eee")};
                     border-radius:8px; padding:.6rem .5rem; text-align:center; margin-bottom:.4rem;'>
-                  <div style='font-size:1.5rem; font-weight:700; color:#1E2761;'>{cnt}</div>
+                  <div style='font-size:1.5rem; font-weight:700; color:#003327;'>{cnt}</div>
                   <div style='font-size:.72rem; color:#555;'>{status}</div>
                 </div>""", unsafe_allow_html=True)
 

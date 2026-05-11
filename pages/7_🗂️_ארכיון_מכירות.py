@@ -20,7 +20,7 @@ header[data-testid="stHeader"]{display:none;}
     font-size:.82rem; font-weight:600;
 }
 </style>""", unsafe_allow_html=True)
-st.markdown("<h2 style='color:#1E2761;'>🗂️ ארכיון מכירות</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:#003327;'>🗂️ ארכיון מכירות</h2>", unsafe_allow_html=True)
 
 DATA_DIR      = Path(__file__).parent.parent / "local_data"
 INVESTORS_FILE = DATA_DIR / "ProductInvestors.json"
@@ -218,7 +218,7 @@ display_cols = [c for c in display_cols if c in filtered.columns]
 
 def _color_status(val):
     colors = {
-        "🟢 פעיל":   "background-color:#C6EFCE; color:#1A7A4A",
+        "🟢 פעיל":   "background-color:#C6EFCE; color:#003327",
         "🔴 סגור":   "background-color:#FDEBD0; color:#C55A11",
         "⚠️ פקע":    "background-color:#FFF2CC; color:#7D6608",
         "📁 ארכיון": "background-color:#EEF0F8; color:#555",

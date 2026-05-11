@@ -11,7 +11,7 @@ from config import CONFIDENCE, CURRENCIES, REDEMP_COLS, PIPELINE_COLS
 require_login()
 
 st.markdown("""<style>.stApp{direction:rtl;} header[data-testid="stHeader"]{display:none;}</style>""", unsafe_allow_html=True)
-st.markdown("<h2 style='color:#1F6B75;'>🔄 פקדונות שפקעו — לידים חמים</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:#005059;'>🔄 פקדונות שפקעו — לידים חמים</h2>", unsafe_allow_html=True)
 st.info("💡 משקיע שפקד לו מוצר = הליד הכי חם לפקדון הבא. כבר מכיר ומאמין. לגשת ראשון.")
 
 CONTACT_STATUS = ["לא", "בשיחה", "מעוניין"]
@@ -58,7 +58,7 @@ if isin_input:
         # Product info card
         st.markdown(
             f"<div style='background:#D6EEF2;border-radius:10px;padding:.8rem 1.2rem;direction:rtl;margin:.5rem 0;'>"
-            f"<b style='color:#1E2761;'>{isin_input}</b> — {prod['שם מלא'][:80]}<br>"
+            f"<b style='color:#003327;'>{isin_input}</b> — {prod['שם מלא'][:80]}<br>"
             f"<small style='color:#555;'>מנפיק: {prod['מנפיק']} &nbsp;|&nbsp; הנפקה: {prod['ISSUE DATE']}"
             f" &nbsp;|&nbsp; {len(investors)} משקיעים</small>"
             f"</div>",
@@ -174,18 +174,18 @@ else:
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown(f"""<div style='background:#D6EEF2;border-radius:8px;padding:.75rem 1rem;direction:rtl;'>
-          <div style='font-size:.85rem;color:#1F6B75;'>פקדונות שפקעו</div>
-          <div style='font-size:2rem;font-weight:700;color:#1F6B75;'>{total}</div>
+          <div style='font-size:.85rem;color:#005059;'>פקדונות שפקעו</div>
+          <div style='font-size:2rem;font-weight:700;color:#005059;'>{total}</div>
         </div>""", unsafe_allow_html=True)
     with c2:
         st.markdown(f"""<div style='background:#C6EFCE;border-radius:8px;padding:.75rem 1rem;direction:rtl;'>
-          <div style='font-size:.85rem;color:#1A7A4A;'>בשיחה / מעוניין</div>
-          <div style='font-size:2rem;font-weight:700;color:#1A7A4A;'>{hot}</div>
+          <div style='font-size:.85rem;color:#003327;'>בשיחה / מעוניין</div>
+          <div style='font-size:2rem;font-weight:700;color:#003327;'>{hot}</div>
         </div>""", unsafe_allow_html=True)
     with c3:
         st.markdown(f"""<div style='background:#D6EEF2;border-radius:8px;padding:.75rem 1rem;direction:rtl;'>
-          <div style='font-size:.85rem;color:#1F6B75;'>סכום כולל שהתקבל</div>
-          <div style='font-size:1.5rem;font-weight:700;color:#1F6B75;'>₪{total_freed:,.0f}</div>
+          <div style='font-size:.85rem;color:#005059;'>סכום כולל שהתקבל</div>
+          <div style='font-size:1.5rem;font-weight:700;color:#005059;'>₪{total_freed:,.0f}</div>
         </div>""", unsafe_allow_html=True)
 
     st.divider()

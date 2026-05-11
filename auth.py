@@ -5,11 +5,11 @@ from config import USER_KEYS
 def login_page():
     st.markdown("""
     <style>
-    .stApp { direction: rtl; }
+    .stApp { direction: rtl; background: linear-gradient(135deg, #003327 0%, #005059 100%); min-height:100vh; }
     .login-wrap { max-width:400px; margin:80px auto; padding:2.5rem;
                   background:#fff; border-radius:14px;
-                  box-shadow:0 4px 28px rgba(30,39,97,.15); direction:rtl; }
-    .login-logo { color:#1E2761; font-size:1.6rem; font-weight:700; margin-bottom:.2rem; }
+                  box-shadow:0 4px 28px rgba(0,51,39,.25); direction:rtl; }
+    .login-logo { color:#003327; font-size:1.6rem; font-weight:700; margin-bottom:.2rem; }
     .login-sub  { color:#666; font-size:.95rem; margin-bottom:1.8rem; }
     header[data-testid="stHeader"] { display:none; }
     </style>

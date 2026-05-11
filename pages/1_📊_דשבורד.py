@@ -48,8 +48,8 @@ st.markdown("""
 <style>
 .stApp { direction: rtl; }
 .kpi-card { background:#fff; border-radius:12px; padding:1.2rem 1.5rem;
-            box-shadow:0 2px 12px rgba(30,39,97,.1); border-right:4px solid #1E2761; }
-.kpi-value { font-size:2rem; font-weight:700; color:#1E2761; }
+            box-shadow:0 2px 12px rgba(0,51,39,.1); border-right:4px solid #FFC300; }
+.kpi-value { font-size:2rem; font-weight:700; color:#003327; }
 .kpi-label { font-size:.85rem; color:#666; }
 header[data-testid="stHeader"] { display:none; }
 div[data-testid="stButton"] button { white-space:nowrap !important; }
@@ -59,8 +59,8 @@ div[data-testid="stButton"] button { white-space:nowrap !important; }
   background:#fff;
   border-radius:12px;
   padding:.85rem 1.2rem;
-  box-shadow:0 2px 10px rgba(30,39,97,.09);
-  border-right:5px solid #1E2761;
+  box-shadow:0 2px 10px rgba(0,51,39,.09);
+  border-right:5px solid #003327;
   display:flex;
   align-items:center;
   gap:1.5rem;
@@ -70,12 +70,12 @@ div[data-testid="stButton"] button { white-space:nowrap !important; }
 }
 .prod-field { display:flex; flex-direction:column; min-width:80px; }
 .prod-field .lbl { font-size:.72rem; color:#888; margin-bottom:.1rem; white-space:nowrap; }
-.prod-field .val { font-size:1rem; font-weight:700; color:#1E2761; white-space:nowrap; }
+.prod-field .val { font-size:1rem; font-weight:700; color:#003327; white-space:nowrap; }
 .prod-field .val.small { font-size:.82rem; }
 .prod-sep { width:1px; height:36px; background:#e0e3ef; flex-shrink:0; }
 </style>""", unsafe_allow_html=True)
 
-st.markdown("<h2 style='color:#1E2761; direction:rtl;'>📊 דשבורד</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:#003327; direction:rtl;'>📊 דשבורד</h2>", unsafe_allow_html=True)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 products_df   = read_df("Products")
@@ -104,15 +104,15 @@ if not products_df.empty and "ISIN" in products_df.columns:
                 <div style="display:flex;flex-direction:column;padding:.45rem .7rem;
                             border-left:1px solid #eaecf5;">
                   <span style="font-size:.68rem;color:#999;margin-bottom:2px;white-space:nowrap;">{label}</span>
-                  <span style="font-size:.95rem;font-weight:700;color:#1E2761;word-break:break-word;">{value}</span>
+                  <span style="font-size:.95rem;font-weight:700;color:#003327;word-break:break-word;">{value}</span>
                 </div>"""
 
             card_col, btn_col = st.columns([11, 1])
             with card_col:
                 st.markdown(f"""
                 <div style="background:#fff;border-radius:12px;
-                            box-shadow:0 2px 10px rgba(30,39,97,.09);
-                            border-right:5px solid #1E2761;
+                            box-shadow:0 2px 10px rgba(0,51,39,.09);
+                            border-right:5px solid #FFC300;
                             display:grid;
                             grid-template-columns:repeat(4,1fr);
                             direction:rtl;margin-bottom:.6rem;overflow:hidden;">
@@ -201,9 +201,9 @@ for cur, sym, label in [("ILS","₪","שקל"), ("USD","$","דולר"), ("EUR","
     st.markdown(f"**{sym} {label}**")
     gc1, gc2, gc3 = st.columns(3)
     with gc1:
-        st.markdown(f"""<div class='kpi-card' style='border-color:#1A7A4A;'>
+        st.markdown(f"""<div class='kpi-card' style='border-color:#003327;'>
           <div class='kpi-label'>גויס ({label})</div>
-          <div class='kpi-value' style='color:#1A7A4A;'>{sym}{rais:,.0f}</div>
+          <div class='kpi-value' style='color:#003327;'>{sym}{rais:,.0f}</div>
         </div>""", unsafe_allow_html=True)
     with gc2:
         st.markdown(f"""<div class='kpi-card'>
@@ -261,15 +261,15 @@ if not pipeline_df.empty and "רמת וודאות" in pipeline_df.columns and "�
         total = sub["_n"].sum()
         cnt   = len(sub)
         with col_obj:
-            st.markdown(f"""<div class='kpi-card' style='border-color:#1F6B75;'>
+            st.markdown(f"""<div class='kpi-card' style='border-color:#005059;'>
               <div class='kpi-label'>פוטנציאל {cur} ({cnt} לידים)</div>
-              <div class='kpi-value' style='color:#1F6B75;'>{sym}{total:,.0f}</div>
+              <div class='kpi-value' style='color:#005059;'>{sym}{total:,.0f}</div>
             </div>""", unsafe_allow_html=True)
     # Coverage vs committed
     pot_ils = hot[hot["מטבע"]=="ILS"]["_n"].sum() if "מטבע" in hot.columns else hot["_n"].sum()
     if committed > 0:
         coverage = int(pot_ils / committed * 100)
-        bar_color = "#1A7A4A" if coverage >= 100 else ("#C55A11" if coverage < 70 else "#B8860B")
+        bar_color = "#003327" if coverage >= 100 else ("#C55A11" if coverage < 70 else "#B8860B")
         st.markdown(f"<div style='margin-top:.8rem; font-size:.9rem; color:{bar_color};'>"
                     f"<b>כיסוי שקלי: {coverage}%</b> מהסכום המתחייב (₪{committed:,.0f})</div>",
                     unsafe_allow_html=True)
@@ -285,9 +285,9 @@ if not sales_df.empty and "שלב" in sales_df.columns:
     for col_obj, stage in zip(cols, SALES_STAGES):
         count = len(sales_df[sales_df["שלב"] == stage])
         with col_obj:
-            st.markdown(f"""<div style='background:#F2F4FA; border-radius:8px; padding:.75rem .5rem;
-                                        text-align:center; border-top:3px solid #1E2761;'>
-              <div style='font-size:1.6rem; font-weight:700; color:#1E2761;'>{count}</div>
+            st.markdown(f"""<div style='background:#F0F5F3; border-radius:8px; padding:.75rem .5rem;
+                                        text-align:center; border-top:3px solid #FFC300;'>
+              <div style='font-size:1.6rem; font-weight:700; color:#003327;'>{count}</div>
               <div style='font-size:.72rem; color:#555; margin-top:.2rem;'>{stage}</div>
             </div>""", unsafe_allow_html=True)
 else:
@@ -303,14 +303,14 @@ if not redemptions_df.empty:
     contacted = len(hot)
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown(f"""<div class='kpi-card' style='border-color:#1F6B75;'>
+        st.markdown(f"""<div class='kpi-card' style='border-color:#005059;'>
           <div class='kpi-label'>פקדונות שפקעו</div>
-          <div class='kpi-value' style='color:#1F6B75;'>{total}</div>
+          <div class='kpi-value' style='color:#005059;'>{total}</div>
         </div>""", unsafe_allow_html=True)
     with c2:
-        st.markdown(f"""<div class='kpi-card' style='border-color:#1A7A4A;'>
+        st.markdown(f"""<div class='kpi-card' style='border-color:#003327;'>
           <div class='kpi-label'>בשיחה / מעוניין בפקדון הבא</div>
-          <div class='kpi-value' style='color:#1A7A4A;'>{contacted}</div>
+          <div class='kpi-value' style='color:#003327;'>{contacted}</div>
         </div>""", unsafe_allow_html=True)
 else:
     st.info("אין פקדונות פקועים עדיין")

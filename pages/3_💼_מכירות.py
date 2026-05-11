@@ -8,17 +8,17 @@ from config import SALES_STAGES, BANKS, CURRENCIES, SALES_COLS, BANK_DETAILS, US
 require_login()
 
 st.markdown("""<style>.stApp{direction:rtl;} header[data-testid="stHeader"]{display:none;}</style>""", unsafe_allow_html=True)
-st.markdown("<h2 style='color:#1E2761;'>💼 מעקב מכירות</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:#003327;'>💼 מעקב מכירות</h2>", unsafe_allow_html=True)
 st.caption("ניהול 7 שלבי הליך המכירה — מהצעה ועד אישור בנק מנפיק.")
 
 STAGE_COLORS = {
-    "הצעה נשלחה":           "#C9D7F5",
-    "מעוניין - בבחינה":     "#C9D7F5",
-    "אישר כניסה":            "#FFF2CC",
-    "הנחיות נשלחו ללקוח":  "#FDEBD0",
-    "בנק לקוח מטפל":         "#FDEBD0",
+    "הצעה נשלחה":           "#E8F4F0",
+    "מעוניין - בבחינה":     "#E8F4F0",
+    "אישר כניסה":            "#FFF3CD",
+    "הנחיות נשלחו ללקוח":  "#FFF0C2",
+    "בנק לקוח מטפל":         "#FFF0C2",
     'אושר ע"י בנק מנפיק':   "#C6EFCE",
-    "נכנס לפקדון":            "#1A7A4A",
+    "נכנס לפקדון":            "#003327",
 }
 
 
@@ -143,13 +143,13 @@ else:
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown(f"<div style='background:#C6EFCE;border-radius:8px;padding:.75rem 1rem;direction:rtl;'>"
-                    f"<div style='font-size:.85rem;color:#1A7A4A;'>גויס (₪)</div>"
-                    f"<div style='font-size:1.6rem;font-weight:700;color:#1A7A4A;'>₪{total_ils:,.0f}</div>"
+                    f"<div style='font-size:.85rem;color:#003327;'>גויס (₪)</div>"
+                    f"<div style='font-size:1.6rem;font-weight:700;color:#003327;'>₪{total_ils:,.0f}</div>"
                     f"</div>", unsafe_allow_html=True)
     with c2:
-        st.markdown(f"<div style='background:#D6EEF2;border-radius:8px;padding:.75rem 1rem;direction:rtl;'>"
-                    f"<div style='font-size:.85rem;color:#1F6B75;'>גויס ($)</div>"
-                    f"<div style='font-size:1.6rem;font-weight:700;color:#1F6B75;'>${total_usd:,.0f}</div>"
+        st.markdown(f"<div style='background:#E0F0F2;border-radius:8px;padding:.75rem 1rem;direction:rtl;'>"
+                    f"<div style='font-size:.85rem;color:#005059;'>גויס ($)</div>"
+                    f"<div style='font-size:1.6rem;font-weight:700;color:#005059;'>${total_usd:,.0f}</div>"
                     f"</div>", unsafe_allow_html=True)
     with c3:
         st.markdown(f"<div style='background:#FFF2CC;border-radius:8px;padding:.75rem 1rem;direction:rtl;'>"

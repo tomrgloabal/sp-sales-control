@@ -10,7 +10,7 @@ from config import BANKS, BANKS_COLS, BANK_DETAILS, PRIVATAM
 require_login()
 
 st.markdown("""<style>.stApp{direction:rtl;} header[data-testid="stHeader"]{display:none;}</style>""", unsafe_allow_html=True)
-st.markdown("<h2 style='color:#1E2761;'>🏦 הנחיות ביצוע לפי בנק</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:#003327;'>🏦 הנחיות ביצוע לפי בנק</h2>", unsafe_allow_html=True)
 
 BANKS_DIR = Path(__file__).parent.parent / "בנקים"
 
