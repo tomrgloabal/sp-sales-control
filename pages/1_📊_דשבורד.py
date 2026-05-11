@@ -157,22 +157,6 @@ if not products_df.empty and "ISIN" in products_df.columns:
                         st.session_state.pop(f"_confirm_close_{isin_val}", None)
                         st.rerun()
 
-    # Show closed products collapsible
-    closed = products_df[(products_df["סטטוס"] == "סגור") & (products_df["ISIN"].str.strip() != "")].copy()
-    if not closed.empty:
-        with st.expander(f"📁 פקדונות סגורים ({len(closed)})", expanded=False):
-            for row_i, row in closed.iterrows():
-                isin_val = row.get("ISIN", "")
-                cc1, cc2, cc3, cc4 = st.columns([2, 2.5, 2, 1])
-                with cc1: st.write(f"**{row.get('מנפיק','—')}**")
-                with cc2: st.write(isin_val)
-                with cc3: st.write(f"{row.get('מטבע','—')} {row.get('גודל עסקה','—')}")
-                with cc4:
-                    if st.button("♻️ הפעל", key=f"reopen_{isin_val}", use_container_width=True):
-                        products_df.at[row_i, "סטטוס"] = "פעיל"
-                        write_df("Products", products_df)
-                        log_action(current_user(), "פתיחת פקדון מחדש", isin_val)
-                        st.rerun()
     if active.empty:
         st.info("אין פקדונות פעילים כרגע")
 else:
