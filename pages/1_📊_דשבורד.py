@@ -60,42 +60,35 @@ if not products_df.empty and "ISIN" in products_df.columns:
             maturity  = row.get("תאריך פדיון", "—")
             barrier   = row.get("מחסום", "—")
 
-            card_left, card_right = st.columns([10, 1])
-            with card_left:
-                def _field(label, value, small=False):
-                    fs = "0.82rem" if small else "1rem"
-                    return f"""<div style="display:flex;flex-direction:column;min-width:70px;">
-                      <span style="font-size:.7rem;color:#888;white-space:nowrap;margin-bottom:2px;">{label}</span>
-                      <span style="font-size:{fs};font-weight:700;color:#1E2761;white-space:nowrap;">{value}</span>
-                    </div>"""
-                def _sep():
-                    return '<div style="width:1px;height:36px;background:#e0e3ef;flex-shrink:0;"></div>'
+            def _cell(label, value):
+                return f"""
+                <div style="display:flex;flex-direction:column;padding:.45rem .7rem;
+                            border-left:1px solid #eaecf5;">
+                  <span style="font-size:.68rem;color:#999;margin-bottom:2px;white-space:nowrap;">{label}</span>
+                  <span style="font-size:.95rem;font-weight:700;color:#1E2761;word-break:break-word;">{value}</span>
+                </div>"""
 
+            card_col, btn_col = st.columns([11, 1])
+            with card_col:
                 st.markdown(f"""
-                <div style="background:#fff;border-radius:12px;padding:.85rem 1.2rem;
+                <div style="background:#fff;border-radius:12px;
                             box-shadow:0 2px 10px rgba(30,39,97,.09);
                             border-right:5px solid #1E2761;
-                            display:flex;align-items:center;gap:1.2rem;
-                            flex-wrap:nowrap;direction:rtl;margin-bottom:.5rem;overflow-x:auto;">
-                  {_field("מנפיק", issuer)}
-                  {_sep()}
-                  {_field("ISIN", isin_val, small=True)}
-                  {_sep()}
-                  {_field("מטבע", currency)}
-                  {_sep()}
-                  {_field("גודל עסקה", size)}
-                  {_sep()}
-                  {_field("קופון שנתי", coupon)}
-                  {_sep()}
-                  {_field('מח"מ', f"{duration} ח'")}
-                  {_sep()}
-                  {_field("תאריך פדיון", maturity, small=True)}
-                  {_sep()}
-                  {_field("מחסום", barrier)}
+                            display:grid;
+                            grid-template-columns:repeat(4,1fr);
+                            direction:rtl;margin-bottom:.6rem;overflow:hidden;">
+                  {_cell("מנפיק", issuer)}
+                  {_cell("ISIN", isin_val)}
+                  {_cell("מטבע", currency)}
+                  {_cell("גודל עסקה", size)}
+                  {_cell("קופון שנתי", coupon)}
+                  {_cell('מח"מ (חודשים)', f"{duration} ח'")}
+                  {_cell("תאריך פדיון", maturity)}
+                  {_cell("מחסום", barrier)}
                 </div>
                 """, unsafe_allow_html=True)
-            with card_right:
-                st.markdown("<div style='padding-top:.4rem'></div>", unsafe_allow_html=True)
+            with btn_col:
+                st.markdown("<div style='padding-top:1.4rem'></div>", unsafe_allow_html=True)
                 if st.button("🔒 סגור", key=f"close_{isin_val}", use_container_width=True):
                     products_df.at[row_i, "סטטוס"] = "סגור"
                     write_df("Products", products_df)
