@@ -1,8 +1,46 @@
+import json
 import streamlit as st
 import pandas as pd
+from datetime import date
+from pathlib import Path
 from auth import require_login, current_user
 from sheets import read_df, write_df, log_action
 from config import SALES_STAGES
+
+INV_FILE = Path(__file__).parent.parent / "local_data" / "ProductInvestors.json"
+
+def _archive_product_sales(isin: str, prod_row, sales_df: pd.DataFrame):
+    """Copy closed product + its Sales rows into ProductInvestors.json."""
+    archive = {}
+    if INV_FILE.exists():
+        try:
+            archive = json.loads(INV_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            archive = {}
+
+    # Sales for this ISIN
+    investors = []
+    if not sales_df.empty and "ISIN פקדון" in sales_df.columns:
+        subset = sales_df[sales_df["ISIN פקדון"].astype(str).str.strip() == isin]
+        for _, r in subset.iterrows():
+            investors.append({
+                "שם המשקיע": str(r.get("שם לקוח", "")),
+                "סכום":      float(str(r.get("סכום", 0) or 0).replace(",", "") or 0),
+                "מטבע":      str(r.get("מטבע", "ILS")),
+                "שותף":      str(r.get("דרך נציג", "")),
+                "בנק":       str(r.get("בנק", "")),
+                "סטטוס":     str(r.get("שלב", "")),
+            })
+
+    issuer   = str(prod_row.get("מנפיק", ""))
+    prod_name = f"{issuer} | {prod_row.get('נכסי בסיס', '')} | {prod_row.get('קופון שנתי', '')}%"
+    archive[isin] = {
+        "שם מלא":    prod_name.strip(" |"),
+        "מנפיק":     issuer,
+        "ISSUE DATE": str(prod_row.get("תאריך סגירת גיוס", "") or date.today().strftime("%Y-%m-%d")),
+        "משקיעים":   investors,
+    }
+    INV_FILE.write_text(json.dumps(archive, ensure_ascii=False, indent=2), encoding="utf-8")
 
 require_login()
 
@@ -91,10 +129,33 @@ if not products_df.empty and "ISIN" in products_df.columns:
             with btn_col:
                 st.markdown("<div style='padding-top:1.4rem'></div>", unsafe_allow_html=True)
                 if st.button("🔒 סגור", key=f"close_{isin_val}", use_container_width=True):
-                    products_df.at[row_i, "סטטוס"] = "סגור"
-                    write_df("Products", products_df)
-                    log_action(current_user(), "סגירת פקדון", isin_val)
-                    st.rerun()
+                    st.session_state[f"_confirm_close_{isin_val}"] = True
+
+            # Confirmation panel — appears below the card
+            if st.session_state.get(f"_confirm_close_{isin_val}"):
+                sales_for_isin = sales_df[sales_df["ISIN פקדון"].astype(str).str.strip() == isin_val] if not sales_df.empty and "ISIN פקדון" in sales_df.columns else pd.DataFrame()
+                n_sales = len(sales_for_isin)
+                st.warning(f"**סגירת פקדון {isin_val}** — נמצאו **{n_sales} מכירות** הקשורות לפקדון זה.")
+                ca, cb, cc = st.columns(3)
+                with ca:
+                    if st.button("📦 סגור + העבר לארכיון", key=f"confirm_archive_{isin_val}", type="primary", use_container_width=True):
+                        _archive_product_sales(isin_val, row, sales_df)
+                        products_df.at[row_i, "סטטוס"] = "סגור"
+                        write_df("Products", products_df)
+                        log_action(current_user(), "סגירת פקדון + ארכוב", f"{isin_val} | {n_sales} מכירות")
+                        st.session_state.pop(f"_confirm_close_{isin_val}", None)
+                        st.rerun()
+                with cb:
+                    if st.button("🔒 סגור בלבד", key=f"confirm_close_only_{isin_val}", use_container_width=True):
+                        products_df.at[row_i, "סטטוס"] = "סגור"
+                        write_df("Products", products_df)
+                        log_action(current_user(), "סגירת פקדון", isin_val)
+                        st.session_state.pop(f"_confirm_close_{isin_val}", None)
+                        st.rerun()
+                with cc:
+                    if st.button("ביטול", key=f"cancel_close_{isin_val}", use_container_width=True):
+                        st.session_state.pop(f"_confirm_close_{isin_val}", None)
+                        st.rerun()
 
     # Show closed products collapsible
     closed = products_df[(products_df["סטטוס"] == "סגור") & (products_df["ISIN"].str.strip() != "")].copy()
