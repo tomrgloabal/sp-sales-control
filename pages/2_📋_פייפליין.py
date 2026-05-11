@@ -171,7 +171,8 @@ with fc4:
     filter_tool = st.multiselect("כלי", ["A", "B"], default=["A", "B"])
 
 # ── Table ─────────────────────────────────────────────────────────────────────
-df = read_df("Pipeline")
+_full_pipeline = read_df("Pipeline")   # master copy — never filtered
+df = _full_pipeline.copy()
 
 if df.empty:
     st.info("הפייפליין ריק. הוסף ליד ראשון.")
@@ -202,15 +203,64 @@ else:
                   <div style='font-size:.72rem; color:#555;'>{status}</div>
                 </div>""", unsafe_allow_html=True)
 
-    st.caption(f"מציג {len(df)} לידים")
+    st.caption(f"מציג {len(df)} לידים  |  ✅ סמן שורה בעמודה 🗑️ ולחץ 'מחק מסומנים'")
 
-    def style_conf(val):
-        colors = {"גבוהה": "background-color:#C6EFCE", "בינונית": "background-color:#FFF2CC", "נמוכה": "background-color:#FDEBD0"}
-        return colors.get(val, "")
+    # ── Editable table with per-row delete checkbox ────────────────────────────
+    # Keep mapping: position in filtered table → original index in _full_pipeline
+    _orig_indices = df.index.tolist()
+    display_cols = [c for c in PIPELINE_COLS if c in df.columns]
+    table_df = df[display_cols].reset_index(drop=True).copy()
+    table_df.insert(0, "🗑️", False)
 
-    display_df = df[PIPELINE_COLS].copy() if all(c in df.columns for c in PIPELINE_COLS) else df
-    styled = display_df.style.map(style_conf, subset=["רמת וודאות"] if "רמת וודאות" in display_df.columns else [])
-    st.dataframe(styled, use_container_width=True, height=400)
+    edited = st.data_editor(
+        table_df,
+        use_container_width=True,
+        height=420,
+        hide_index=True,
+        column_config={
+            "🗑️": st.column_config.CheckboxColumn(
+                "🗑️", help="סמן שורות למחיקה", width="small"
+            ),
+            "רמת וודאות": st.column_config.SelectboxColumn(
+                "רמת וודאות", options=CONFIDENCE, width="small"
+            ),
+            "סטטוס": st.column_config.SelectboxColumn(
+                "סטטוס", options=PIPELINE_STATUS, width="small"
+            ),
+        },
+        disabled=[c for c in table_df.columns if c != "🗑️"],
+        key="pipeline_table_editor",
+    )
+
+    # ── Confirm & execute deletion ─────────────────────────────────────────────
+    marked_positions = edited.index[edited["🗑️"]].tolist()
+    if marked_positions:
+        n_marked = len(marked_positions)
+        st.markdown(
+            f"<div style='background:#FFF0C2;border-radius:8px;padding:.6rem 1rem;"
+            f"border-right:4px solid #C9980B;margin:.4rem 0;direction:rtl;'>"
+            f"<b>✔ {n_marked} רשומות מסומנות למחיקה</b></div>",
+            unsafe_allow_html=True
+        )
+        col_del, col_cancel = st.columns([1, 3])
+        with col_del:
+            if st.button(f"🗑️ מחק {n_marked} מסומנות", type="primary", key="del_checked_rows"):
+                orig_idx_to_delete = [_orig_indices[p] for p in marked_positions]
+                for orig_idx in orig_idx_to_delete:
+                    r = _full_pipeline.loc[orig_idx]
+                    details = (
+                        f"{r.get('שם לקוח','')} | נציג: {r.get('דרך נציג','')} | "
+                        f"ISIN: {r.get('ISIN פקדון','')} | "
+                        f"{r.get('סכום משוער','')} {r.get('מטבע','')} | "
+                        f"וודאות: {r.get('רמת וודאות','')} | "
+                        f"סטטוס: {r.get('סטטוס','')} | "
+                        f"הערות: {str(r.get('הערות',''))[:60]}"
+                    )
+                    log_action(current_user(), "מחיקת ליד", details)
+                cleaned = _full_pipeline.drop(index=orig_idx_to_delete).reset_index(drop=True)
+                write_df("Pipeline", cleaned)
+                st.success(f"✓ {n_marked} רשומות נמחקו")
+                st.rerun()
 
     # ── Totals by currency ────────────────────────────────────────────────────
     if "סכום משוער" in df.columns and "מטבע" in df.columns:
@@ -290,81 +340,6 @@ if not full_df.empty and "שם לקוח" in full_df.columns:
         st.success("✓ נשמר")
         st.rerun()
 
-    # ── Delete lead (single, tied to current edit selection) ─────────────────
-    st.markdown("---")
-    _del_key = f"confirm_delete_{sel_name}"
-    if not st.session_state.get(_del_key):
-        if st.button(f"🗑️ מחק את '{sel_name}' מהפייפליין", use_container_width=True):
-            st.session_state[_del_key] = True
-            st.rerun()
-    else:
-        st.warning(f"⚠️ בטוח שרוצה למחוק את **{sel_name}**? פעולה זו אינה הפיכה.")
-        col_yes, col_no = st.columns(2)
-        with col_yes:
-            if st.button("✅ כן, מחק", type="primary", use_container_width=True):
-                details = (
-                    f"{sel_name} | נציג: {row_data.get('דרך נציג','')} | "
-                    f"ISIN: {row_data.get('ISIN פקדון','')} | "
-                    f"{row_data.get('סכום משוער','')} {row_data.get('מטבע','')} | "
-                    f"וודאות: {row_data.get('רמת וודאות','')} | "
-                    f"סטטוס: {row_data.get('סטטוס','')} | "
-                    f"הערות: {str(row_data.get('הערות',''))[:60]}"
-                )
-                updated_df = full_df.drop(index=row_idx).reset_index(drop=True)
-                write_df("Pipeline", updated_df)
-                log_action(current_user(), "מחיקת ליד", details)
-                st.session_state.pop(_del_key, None)
-                st.success(f"✓ {sel_name} נמחק מהפייפליין")
-                st.rerun()
-        with col_no:
-            if st.button("❌ ביטול", use_container_width=True):
-                st.session_state.pop(_del_key, None)
-                st.rerun()
-
-# ── Bulk delete ────────────────────────────────────────────────────────────────
-full_df2 = read_df("Pipeline")
-if not full_df2.empty and "שם לקוח" in full_df2.columns:
-    st.markdown("---")
-    with st.expander("🗑️ מחיקת רשומות מרובות", expanded=False):
-        st.caption("בחר רשומות אחת או יותר למחיקה. הפעולה תתועד בלוג.")
-        all_names = full_df2["שם לקוח"].tolist()
-        to_delete = st.multiselect("בחר לקוחות למחיקה", all_names, key="bulk_del_sel")
-
-        if to_delete:
-            preview_df = full_df2[full_df2["שם לקוח"].isin(to_delete)]
-            show_cols = [c for c in PIPELINE_COLS if c in preview_df.columns]
-            st.dataframe(preview_df[show_cols], use_container_width=True, hide_index=True)
-
-            if not st.session_state.get("confirm_bulk_delete"):
-                if st.button(f"🗑️ מחק {len(to_delete)} רשומות", type="primary", use_container_width=True):
-                    st.session_state["confirm_bulk_delete"] = True
-                    st.rerun()
-            else:
-                st.error(f"⚠️ האם למחוק {len(to_delete)} רשומות? פעולה זו **אינה הפיכה**.")
-                cb1, cb2 = st.columns(2)
-                with cb1:
-                    if st.button("✅ אשר מחיקה", type="primary", use_container_width=True):
-                        idx_to_drop = full_df2[full_df2["שם לקוח"].isin(to_delete)].index
-                        for idx in idx_to_drop:
-                            r = full_df2.loc[idx]
-                            details = (
-                                f"{r.get('שם לקוח','')} | נציג: {r.get('דרך נציג','')} | "
-                                f"ISIN: {r.get('ISIN פקדון','')} | "
-                                f"{r.get('סכום משוער','')} {r.get('מטבע','')} | "
-                                f"וודאות: {r.get('רמת וודאות','')} | "
-                                f"סטטוס: {r.get('סטטוס','')} | "
-                                f"הערות: {str(r.get('הערות',''))[:60]}"
-                            )
-                            log_action(current_user(), "מחיקת ליד", details)
-                        cleaned = full_df2.drop(index=idx_to_drop).reset_index(drop=True)
-                        write_df("Pipeline", cleaned)
-                        st.session_state.pop("confirm_bulk_delete", None)
-                        st.success(f"✓ {len(to_delete)} רשומות נמחקו")
-                        st.rerun()
-                with cb2:
-                    if st.button("❌ ביטול", use_container_width=True):
-                        st.session_state.pop("confirm_bulk_delete", None)
-                        st.rerun()
 
 # ── Deletion audit log viewer ──────────────────────────────────────────────────
 with st.expander("📋 לוג מחיקות", expanded=False):
